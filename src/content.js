@@ -2,7 +2,14 @@ import { extractAllText, watchDomChanges } from './textExtraction.js';
 import { preprocessExtracts } from './preprocess.js';
 import { chunkText, buildSourceMap } from './chunker.js';
 import { askBg } from './messaging.js';
-import { getState, saveDecision, getDecision, cacheClassification, getCachedClassification, setState } from './storage.js';
+import {
+  getState,
+  saveDecision,
+  getDecision,
+  cacheClassification,
+  getCachedClassification,
+  setScanProgress,
+} from './storage.js';
 import { mountSidebar, renderSidebar, setSidebarProgress } from './sidebar.js';
 import { clearOverlays, showFlagOverlay, updateOverlayStatus } from './overlay.js';
 import { hashString } from './util.js';
@@ -14,26 +21,36 @@ let lastChunks = [];
 let lastFlagged = [];
 let currentUrl = location.href;
 
+function updateProgress(percent, text) {
+  try {
+    setSidebarProgress({ percent, text });
+  } catch (e) {
+    // ignore sidebar update failures
+  }
+  setScanProgress(currentUrl, { percent, text }).catch(() => {});
+}
+
 async function scanAndClassify() {
+  currentUrl = location.href;
   const { endpoint, apiKey } = await getState();
   clearOverlays();
   mountSidebar(onUserAction);
   // start progress
-  try { setSidebarProgress({ percent: 5, text: 'Starting scan' }); } catch (e) {}
+  updateProgress(5, 'Starting scan');
 
   // 1) Extract
   const extracts = extractAllText();
-  try { setSidebarProgress({ percent: 20, text: 'Extracted text' }); } catch (e) {}
+  updateProgress(20, 'Extracted text');
 
   // 2) Preprocess
   const items = preprocessExtracts(extracts);
-  try { setSidebarProgress({ percent: 35, text: 'Preprocessed' }); } catch (e) {}
+  updateProgress(35, 'Preprocessed');
 
   // 3) Chunk
   const chunks = chunkText(items, { maxTokens: 450, minTokens: 120 });
   lastChunks = chunks;
   lastSourceMap = buildSourceMap(items, chunks);
-  try { setSidebarProgress({ percent: 50, text: `Chunked ${chunks.length}` }); } catch (e) {}
+  updateProgress(50, `Chunked ${chunks.length}`);
 
   // 4) Classify (with cache + per-chunk)
   const toAsk = [];
@@ -49,7 +66,7 @@ async function scanAndClassify() {
   }
 
   if (toAsk.length) {
-    try { setSidebarProgress({ percent: 65, text: 'Classifying' }); } catch (e) {}
+    updateProgress(65, 'Classifying');
     const resp = await askBg('classify', { endpoint, apiKey, url: currentUrl, chunks: toAsk });
     if (!resp.ok) {
       console.warn('Classifier error:', resp.error);
@@ -62,7 +79,9 @@ async function scanAndClassify() {
         await cacheClassification(currentUrl, r.id, r);
       }
     }
-    try { setSidebarProgress({ percent: 85, text: 'Applying results' }); } catch (e) {}
+    updateProgress(85, 'Applying results');
+  } else {
+    updateProgress(85, 'Applying results');
   }
 
   // Build flagged list
@@ -91,7 +110,7 @@ async function scanAndClassify() {
 
   const allResolved = lastFlagged.length === 0;
   renderSidebar({ url: currentUrl, flagged: lastFlagged, allResolved });
-  try { setSidebarProgress({ percent: 100, text: allResolved ? 'Done' : 'Review' }); } catch (e) {}
+  updateProgress(100, allResolved ? 'Done' : 'Review');
 
   // 7) Integration: prepare approved text snapshot
   const st = await getState();
