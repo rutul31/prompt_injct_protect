@@ -1,45 +1,44 @@
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { classifyChunks } from '../src/classifierApi.js';
 
-let requests;
+let originalRandom;
 
 beforeEach(() => {
-  requests = [];
+  originalRandom = Math.random;
+});
+
+afterEach(() => {
+  Math.random = originalRandom;
 });
 
 describe('classifierApi', () => {
-  it('posts classification payload to endpoint', async () => {
-    globalThis.fetch = async (endpoint, options) => {
-      requests.push({ endpoint, options });
-      assert.equal(endpoint, 'https://api.example.com/classify');
-      assert.equal(options.method, 'POST');
-      const body = JSON.parse(options.body);
-      assert.equal(body.url, 'https://site');
-      assert.equal(body.chunks.length, 1);
-      return {
-        ok: true,
-        json: async () => ({ results: [{ id: '1', label: 'safe' }] }),
-      };
-    };
+  it('marks chunk as malicious when random value is high', async () => {
+    Math.random = () => 0.9;
 
     const response = await classifyChunks({
-      endpoint: 'https://api.example.com/classify',
-      apiKey: 'secret',
       url: 'https://site',
       chunks: [{ id: '1', text: 'hello' }],
     });
 
-    assert.equal(response.results[0].label, 'safe');
-    assert.equal(requests.length, 1);
-    assert.equal(requests[0].options.headers.Authorization, 'Bearer secret');
+    assert.equal(response.results.length, 1);
+    assert.equal(response.results[0].id, '1');
+    assert.equal(response.results[0].label, 'malicious');
+    assert.ok(response.results[0].confidence <= 1);
+    assert.ok(response.results[0].confidence >= 0);
+    assert.match(response.results[0].reason, /Dummy classifier/);
   });
 
-  it('throws when classifier response is not ok', async () => {
-    globalThis.fetch = async () => ({ ok: false, status: 500 });
-    await assert.rejects(() =>
-      classifyChunks({ endpoint: 'x', apiKey: '', url: 'y', chunks: [] }),
-      /Classifier HTTP 500/
-    );
+  it('marks chunk as safe when random value is low', async () => {
+    Math.random = () => 0.1;
+
+    const response = await classifyChunks({
+      url: 'https://site',
+      chunks: [{ id: 'abc', text: 'hello' }],
+    });
+
+    assert.equal(response.results[0].label, 'safe');
+    assert.equal(response.results[0].confidence, 0.9);
+    assert.equal(response.results[0].reason, undefined);
   });
 });

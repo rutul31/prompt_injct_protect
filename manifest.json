@@ -3,7 +3,7 @@
   "name": "LLM Prompt Guard",
   "version": "0.1.0",
   "description": "Detects and moderates prompt injection attempts in all text sent to LLMs.",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "permissions": ["storage", "scripting", "activeTab", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_title": "LLM Prompt Guard",
