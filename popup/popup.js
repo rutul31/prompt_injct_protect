@@ -3,6 +3,12 @@
   chrome.tabs.executeScript?.(); // noop for MV3; kept for compatibility
   // We’ll just show a lightweight status via content decision memory
   const statusEl = document.getElementById('status');
+  const statusCard = statusEl?.closest('.status-card');
 
-  statusEl.textContent = 'Open the sidebar on the page. The extension scans automatically.';
+  if (statusCard) {
+    statusCard.dataset.state = 'ready';
+  }
+
+  statusEl.textContent =
+    'Open the sidebar on the page. The extension scans automatically.';
 })();

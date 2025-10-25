@@ -6,12 +6,39 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main>
-      <h1>LLM Prompt Guard</h1>
-      <div id="status">Loading…</div>
-      <div class="row">
-        <a href="../options/options.html" target="_blank">Options</a>
-      </div>
+    <main class="popup">
+      <header class="popup__header">
+        <div class="brand">
+          <div class="brand__icon" aria-hidden="true">🛡️</div>
+          <div class="brand__copy">
+            <p class="brand__eyebrow">Prompt Injection Protection</p>
+            <h1 class="brand__title">LLM Prompt Guard</h1>
+          </div>
+        </div>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div class="status-card__indicator" role="presentation"></div>
+        <div>
+          <p class="status-card__label">Status</p>
+          <p id="status" class="status-card__message">Loading…</p>
+        </div>
+      </section>
+
+      <section class="tips">
+        <h2 class="tips__title">Quick tips</h2>
+        <ul class="tips__list">
+          <li>Open the sidebar on any page that accepts user prompts.</li>
+          <li>The extension scans new content automatically.</li>
+          <li>Check the Options page to tailor protection levels.</li>
+        </ul>
+      </section>
+
+      <footer class="popup__footer">
+        <a class="button" href="../options/options.html" target="_blank" rel="noreferrer">
+          Configure Options
+        </a>
+      </footer>
     </main>
     <script src="popup.js"></script>
   </body>
