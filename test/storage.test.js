@@ -1,6 +1,13 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { getState, setState, saveDecision, getDecision, cacheClassification, getCachedClassification } from '../src/storage.js';
+import {
+  getState,
+  setState,
+  saveDecision,
+  getDecision,
+  cacheClassification,
+  getCachedClassification,
+} from '../src/storage.js';
 
 const namespace = 'llm_prompt_guard';
 let memoryStore;
@@ -33,7 +40,13 @@ beforeEach(() => {
 describe('storage', () => {
   it('returns default state when storage is empty', async () => {
     const state = await getState();
-    assert.deepEqual(state, { apiKey: '', endpoint: '', decisions: {}, cache: {} });
+    assert.deepEqual(state, {
+      apiKey: '',
+      endpoint: '',
+      decisions: {},
+      cache: {},
+      progress: {},
+    });
   });
 
   it('merges patches when setting state', async () => {

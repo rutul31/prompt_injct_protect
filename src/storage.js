@@ -3,7 +3,16 @@ const NAMESPACE = 'llm_prompt_guard';
 
 export async function getState() {
   const r = await chrome.storage.local.get([NAMESPACE]);
-  return r[NAMESPACE] || { apiKey: "", endpoint: "", decisions: {}, cache: {} };
+  const defaults = {
+    apiKey: "",
+    endpoint: "",
+    decisions: {},
+    cache: {},
+    progress: {},
+  };
+  const state = { ...defaults, ...(r[NAMESPACE] || {}) };
+  state.progress = state.progress || {};
+  return state;
 }
 export async function setState(patch) {
   const cur = await getState();
@@ -29,4 +38,16 @@ export async function cacheClassification(url, chunkHash, result) {
 export async function getCachedClassification(url, chunkHash) {
   const s = await getState();
   return s.cache[`${url}::${chunkHash}`];
+}
+
+export async function setScanProgress(url, progress) {
+  const s = await getState();
+  const snapshot = progress ? { ...progress } : {};
+  s.progress[url] = { ...snapshot, ts: Date.now() };
+  await setState({ progress: s.progress });
+}
+
+export async function getScanProgress(url) {
+  const s = await getState();
+  return s.progress[url];
 }
