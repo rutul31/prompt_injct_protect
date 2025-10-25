@@ -3,7 +3,7 @@ import { preprocessExtracts } from './preprocess.js';
 import { chunkText, buildSourceMap } from './chunker.js';
 import { askBg } from './messaging.js';
 import { getState, saveDecision, getDecision, cacheClassification, getCachedClassification, setState } from './storage.js';
-import { mountSidebar, renderSidebar } from './sidebar.js';
+import { mountSidebar, renderSidebar, setSidebarProgress } from './sidebar.js';
 import { clearOverlays, showFlagOverlay, updateOverlayStatus } from './overlay.js';
 import { hashString } from './util.js';
 import { getApprovedForLLM } from './integration.js';
@@ -18,17 +18,22 @@ async function scanAndClassify() {
   const { endpoint, apiKey } = await getState();
   clearOverlays();
   mountSidebar(onUserAction);
+  // start progress
+  try { setSidebarProgress({ percent: 5, text: 'Starting scan' }); } catch (e) {}
 
   // 1) Extract
   const extracts = extractAllText();
+  try { setSidebarProgress({ percent: 20, text: 'Extracted text' }); } catch (e) {}
 
   // 2) Preprocess
   const items = preprocessExtracts(extracts);
+  try { setSidebarProgress({ percent: 35, text: 'Preprocessed' }); } catch (e) {}
 
   // 3) Chunk
   const chunks = chunkText(items, { maxTokens: 450, minTokens: 120 });
   lastChunks = chunks;
   lastSourceMap = buildSourceMap(items, chunks);
+  try { setSidebarProgress({ percent: 50, text: `Chunked ${chunks.length}` }); } catch (e) {}
 
   // 4) Classify (with cache + per-chunk)
   const toAsk = [];
@@ -44,6 +49,7 @@ async function scanAndClassify() {
   }
 
   if (toAsk.length) {
+    try { setSidebarProgress({ percent: 65, text: 'Classifying' }); } catch (e) {}
     const resp = await askBg('classify', { endpoint, apiKey, url: currentUrl, chunks: toAsk });
     if (!resp.ok) {
       console.warn('Classifier error:', resp.error);
@@ -56,6 +62,7 @@ async function scanAndClassify() {
         await cacheClassification(currentUrl, r.id, r);
       }
     }
+    try { setSidebarProgress({ percent: 85, text: 'Applying results' }); } catch (e) {}
   }
 
   // Build flagged list
@@ -84,6 +91,7 @@ async function scanAndClassify() {
 
   const allResolved = lastFlagged.length === 0;
   renderSidebar({ url: currentUrl, flagged: lastFlagged, allResolved });
+  try { setSidebarProgress({ percent: 100, text: allResolved ? 'Done' : 'Review' }); } catch (e) {}
 
   // 7) Integration: prepare approved text snapshot
   const st = await getState();

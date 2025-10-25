@@ -1,7 +1,7 @@
 import { saveDecision } from './storage.js';
 
 const SIDEBAR_ID = 'llm-prompt-guard-sidebar';
-let shadow, root, listEl, statusEl, onActionCb;
+let shadow, root, listEl, statusEl, onActionCb, progressEl;
 
 export function mountSidebar(onAction) {
   onActionCb = onAction;
@@ -44,7 +44,39 @@ export function mountSidebar(onAction) {
   const dot = document.createElement('div'); dot.className='dot';
   const title = document.createElement('h1'); title.textContent = 'LLM Prompt Guard';
   statusEl = document.createElement('span'); statusEl.textContent = 'Scanning…';
-  header.append(dot, title, statusEl);
+
+  // progress bar container
+  const progressWrap = document.createElement('div');
+  progressWrap.style.display = 'flex';
+  progressWrap.style.alignItems = 'center';
+  progressWrap.style.gap = '8px';
+  progressWrap.style.marginLeft = '8px';
+  progressWrap.style.flex = '1';
+
+  progressEl = document.createElement('div');
+  progressEl.className = 'progress';
+  progressEl.style.flex = '1';
+  progressEl.style.height = '8px';
+  progressEl.style.background = '#07102a';
+  progressEl.style.border = '1px solid #12203a';
+  progressEl.style.borderRadius = '6px';
+  progressEl.style.overflow = 'hidden';
+  const bar = document.createElement('div');
+  bar.className = 'progress-bar';
+  bar.style.width = '0%';
+  bar.style.height = '100%';
+  bar.style.background = '#4f7cff';
+  progressEl.appendChild(bar);
+
+  const pct = document.createElement('span');
+  pct.className = 'progress-pct';
+  pct.style.minWidth = '60px';
+  pct.style.fontSize = '12px';
+  pct.textContent = '';
+
+  progressWrap.append(progressEl, pct);
+
+  header.append(dot, title, progressWrap, statusEl);
 
   const scroll = document.createElement('div'); scroll.className='scroll';
   listEl = document.createElement('div');
@@ -55,6 +87,18 @@ export function mountSidebar(onAction) {
   scroll.appendChild(listEl);
   container.append(header, scroll, footer);
   root = { header, dot, title, statusEl, listEl };
+}
+
+export function setSidebarProgress({ percent = 0, text = '' } = {}) {
+  try {
+    if (!progressEl) return;
+    const bar = progressEl.querySelector('.progress-bar');
+    const pct = progressEl.parentElement.querySelector('.progress-pct');
+    if (bar) bar.style.width = `${Math.max(0, Math.min(100, Math.round(percent)))}%`;
+    if (pct) pct.textContent = text ? `${text} (${Math.round(percent)}%)` : `${Math.round(percent)}%`;
+  } catch (e) {
+    // no-op
+  }
 }
 
 function actionButton(txt, cls) {
