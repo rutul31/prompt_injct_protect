@@ -1,0 +1,2 @@
+// "32": "assets/icon32.png",
+// "128": "assets/icon128.png"
